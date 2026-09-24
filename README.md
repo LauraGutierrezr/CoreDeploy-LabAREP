@@ -1,7 +1,7 @@
 # Lambda Web Framework
 
 **Building and Deploying a Maintainable Application Server**
-Author: Alvaro Gutierrez · Escuela Colombiana de Ingeniería
+Author: Laura Valentina Gutierrez Rico· Escuela Colombiana de Ingeniería
 
 A small, dependency-free Java web framework that lets an application
 register HTTP `GET` routes as lambdas and serve static files, built on top
@@ -151,32 +151,29 @@ coredeploy/
 ├── pom.xml
 ├── README.md
 ├── .gitignore
-├── docs/
-│   └── architecture.svg
 ├── deploy/
-│   ├── lambda-web-framework.service   # systemd unit
-│   └── deploy.sh                      # scp/ssh deploy script
+│   ├── lambda-web-framework.service  
+│   └── deploy.sh                    
 └── src/
     ├── main/
     │   ├── java/co/edu/escuelaing/
-    │   │   ├── webframework/          # the framework
-    │   │   └── app/Application.java   # the demo app
-    │   └── resources/webroot/         # static front end (packaged in the jar)
+    │   │   ├── webframework/ 
+    │   │   └── app/Application.java   
+    │   └── resources/webroot/    
     │       ├── index.html
     │       ├── styles.css
     │       ├── app.js
     │       └── images/logo.png
     └── test/
         ├── java/co/edu/escuelaing/webframework/
-        └── resources/webroot-test/    # fixture for the classpath-mode test
+        └── resources/webroot-test/   
 ```
 
 ## Requirements
 
 - JDK 17+
 - Maven 3.8+
-- No external services and no runtime dependencies — everything needed to
-  run the app is the JDK standard library.
+
 
 ## Building and running locally
 
@@ -211,6 +208,10 @@ PORT=8081 GREETING_PREFIX=Hola java -jar target/lambda-web-framework.jar
 | `GREETING_PREFIX` | `Hello` | Text prepended to the `/hello` response, e.g. `Hola` for a Spanish greeting. |
 | `APP_ENV` | *(unset)* | Set to `production` to disable the `/shutdown` route before a public deployment. |
 | `STATIC_FILES_PATH` | *(unset)* | If set, static files are read from this directory on disk instead of the jar's packaged classpath resources. |
+
+`new ServerSocket(port)` binds to all network interfaces by default (not
+just `127.0.0.1`), so the same jar is reachable from the cloud platform's
+public IP without any extra binding configuration.
 
 ## Using the framework in a new application
 
@@ -266,6 +267,9 @@ Expected output (evidence to paste here after running locally):
 
 ## Deploying to AWS EC2
 
+**Cloud platform:** AWS (EC2).
+**Public deployment URL:** `[PASTE: http://<instance-ip>:8081/ here after deploying]`
+
 This assumes an EC2 instance already exists (Amazon Linux 2023, Corretto
 17 installed) — the same instance used for the Networking Lab can be
 reused, since this app runs on a different port. Adjust the host/port
@@ -299,17 +303,39 @@ If you would rather deploy by hand instead of running the script, see
 `deploy/deploy.sh` — it is a short, readable sequence of `scp`/`ssh`
 commands with no hidden steps.
 
+### Example URLs (replace `<instance-ip>` with the real public IP/DNS)
+
+| Resource | URL |
+|---|---|
+| Front page (static) | `http://<instance-ip>:8081/` |
+| Static JS | `http://<instance-ip>:8081/app.js` |
+| Static image (binary) | `http://<instance-ip>:8081/images/logo.png` |
+| REST endpoint 1 | `http://<instance-ip>:8081/hello?name=Ana` |
+| REST endpoint 2 | `http://<instance-ip>:8081/pi` |
+| Unknown path (404 check) | `http://<instance-ip>:8081/does-not-exist` |
+
 ## Evidence
 
-*(Screenshots/output to attach when submitting the lab.)*
 
-- [ ] `mvn clean package` succeeding locally, with test summary.
+
+**Local**
+
+- [ ] `mvn clean package` succeeding, with the test summary (`Tests run: N, Failures: 0, Errors: 0`).
 - [ ] `curl http://localhost:8080/hello?name=...` and `/pi` responses, run locally.
+- [ ] `curl http://localhost:8080/does-not-exist` returning `404`.
 - [ ] Browser screenshot of the demo page working locally.
-- [ ] Security group inbound rule for the app port.
+- [ ] `curl http://localhost:8080/shutdown` (with `APP_ENV` unset/`development`) returning its confirmation message, and the server process exiting right after — evidence that `/shutdown` works in development.
+
+**Cloud (AWS EC2)**
+
+- [ ] Security group inbound rule for port `8081`.
 - [ ] `systemctl status lambda-web-framework` on the instance showing `active (running)`.
-- [ ] Browser screenshot of the demo page working against the public EC2 IP, including a successful `/hello` and `/pi` call (Network tab optional but recommended).
-- [ ] `curl http://<instance-ip>:8081/shutdown` returning `404` (proving it is disabled in production).
+- [ ] Browser screenshot of the demo page working against the public EC2 IP.
+- [ ] `curl` output for both REST endpoints against the public IP (`/hello?name=...` and `/pi`).
+- [ ] Browser or `curl` evidence of the static image loading (`/images/logo.png`).
+- [ ] `curl http://<instance-ip>:8081/does-not-exist` returning `404`.
+- [ ] `curl -i http://<instance-ip>:8081/shutdown` returning `404` — evidence it is **not** available in production.
+- [ ] Evidence of the configured environment variables **without exposing secrets** — e.g. `sudo systemctl show lambda-web-framework -p Environment` on the instance, or a screenshot of the `Environment=` lines in `deploy/lambda-web-framework.service` (there is nothing secret in `PORT`/`APP_ENV`/`GREETING_PREFIX`, so this is safe to show as-is).
 
 ## Maintainability
 
