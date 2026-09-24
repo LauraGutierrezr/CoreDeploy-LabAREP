@@ -1,0 +1,27 @@
+# Build output
+target/
+*.class
+*.jar
+
+# IDE / editor metadata
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+*.swp
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Secrets and keys - never commit these
+*.pem
+*.key
+*credentials*
+.env
+.env.*
