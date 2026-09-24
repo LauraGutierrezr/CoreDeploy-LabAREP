@@ -1,0 +1,41 @@
+# systemd unit file for the lambda web framework demo app.
+#
+# Install on the EC2 instance with:
+#   sudo cp lambda-web-framework.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now lambda-web-framework
+#
+# Runs on port 8081 by default so it can coexist on the same instance as
+# the Networking Lab's mini-http-server (port 8080), if that is still
+# deployed there. Change PORT below (and the security group rule) if you
+# deploy this app alone or on a different port.
+[Unit]
+Description=Lambda Web Framework demo app (Building and Deploying a Maintainable Application Server)
+After=network.target
+
+[Service]
+Type=simple
+
+# Change this if you deploy under a different user or path.
+User=ec2-user
+WorkingDirectory=/opt/lambda-web-framework
+
+Environment=PORT=8081
+Environment=APP_ENV=production
+Environment=GREETING_PREFIX=Hello
+
+# Static files are served from inside the jar (classpath resources), so
+# STATIC_FILES_PATH is intentionally not set here. Set it only if you want
+# to override the front end with files on disk without rebuilding the jar.
+
+ExecStart=/usr/bin/java -jar /opt/lambda-web-framework/lambda-web-framework.jar
+
+Restart=on-failure
+RestartSec=5
+
+# Logs go to a known, fixed location instead of only the journal.
+StandardOutput=append:/var/log/lambda-web-framework/server.log
+StandardError=append:/var/log/lambda-web-framework/server.log
+
+[Install]
+WantedBy=multi-user.target
