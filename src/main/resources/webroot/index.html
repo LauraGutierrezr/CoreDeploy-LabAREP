@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lambda Web Framework · Demo</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <img src="images/logo.png" alt="Lambda Web Framework logo" class="logo">
+    <h1>Lambda Web Framework</h1>
+    <p class="subtitle">A small Spark-style Java framework: lambda routes + static files, one sequential server.</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>GET /hello</h2>
+      <p>Calls a lambda route registered as <code>WebFramework.get("/hello", (req, resp) -&gt; ...)</code>. The name comes from a query parameter read with <code>req.getValue("name")</code>.</p>
+      <form id="hello-form">
+        <label for="name-input">Your name</label>
+        <input id="name-input" type="text" placeholder="e.g. Ana" autocomplete="off">
+        <button type="submit">Say hello</button>
+      </form>
+      <pre id="hello-result" class="result" aria-live="polite">Result will appear here.</pre>
+    </section>
+
+    <section class="card">
+      <h2>GET /pi</h2>
+      <p>A second lambda route with no input, returning a computed value.</p>
+      <button id="pi-button" type="button">Get the value of π</button>
+      <pre id="pi-result" class="result" aria-live="polite">Result will appear here.</pre>
+    </section>
+  </main>
+
+  <footer>
+    <p>Static HTML/CSS/JS and this image are served by the same framework, through <code>staticfiles()</code>.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
