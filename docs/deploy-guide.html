@@ -1,0 +1,543 @@
+<title>Manual de despliegue · Lambda Web Framework</title>
+<meta name="description" content="Guía paso a paso para subir el proyecto a GitHub y desplegarlo en la instancia EC2, en el puerto 8081.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #f6f3ec;
+    --surface: #ffffff;
+    --surface-2: #eee8db;
+    --ink: #1c1f26;
+    --ink-muted: #5c6270;
+    --border: #ddd5c2;
+    --accent: #2f6f6a;
+    --accent-ink: #ffffff;
+    --accent-soft: #e2efec;
+    --warn: #a8551f;
+    --warn-soft: #f7e9dc;
+    --danger: #a3312a;
+    --danger-soft: #f8e3e0;
+    --code-bg: #14181f;
+    --code-ink: #dde6ea;
+    --code-accent: #7fd4c4;
+    --chip: #efe9db;
+    --github-accent: #4b4238;
+    --github-soft: #ece5d6;
+    --aws-accent: #a8551f;
+    --aws-soft: #f7e9dc;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14171c;
+      --surface: #1b1f26;
+      --surface-2: #20252d;
+      --ink: #e9e6de;
+      --ink-muted: #9aa1ac;
+      --border: #323844;
+      --accent: #5fc4b6;
+      --accent-ink: #0d1a18;
+      --accent-soft: #1c2e2c;
+      --warn: #e2a06a;
+      --warn-soft: #2e2318;
+      --danger: #e08b84;
+      --danger-soft: #301c1b;
+      --code-bg: #0c0f13;
+      --code-ink: #d8e2e8;
+      --code-accent: #7fd4c4;
+      --chip: #262b33;
+      --github-accent: #cfc6b6;
+      --github-soft: #262b33;
+      --aws-accent: #e2a06a;
+      --aws-soft: #2e2318;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14171c;
+    --surface: #1b1f26;
+    --surface-2: #20252d;
+    --ink: #e9e6de;
+    --ink-muted: #9aa1ac;
+    --border: #323844;
+    --accent: #5fc4b6;
+    --accent-ink: #0d1a18;
+    --accent-soft: #1c2e2c;
+    --warn: #e2a06a;
+    --warn-soft: #2e2318;
+    --danger: #e08b84;
+    --danger-soft: #301c1b;
+    --code-bg: #0c0f13;
+    --code-ink: #d8e2e8;
+    --code-accent: #7fd4c4;
+    --chip: #262b33;
+    --github-accent: #cfc6b6;
+    --github-soft: #262b33;
+    --aws-accent: #e2a06a;
+    --aws-soft: #2e2318;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; padding-inline: 20px; }
+
+  .topbar {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 20;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar-inner {
+    max-width: 780px; margin: 0 auto; padding: 10px 20px;
+    display: flex; align-items: center; gap: 14px; overflow-x: auto;
+  }
+  .topbar a {
+    font-family: "JetBrains Mono", monospace; font-size: 12.5px;
+    text-decoration: none; color: var(--ink-muted); white-space: nowrap;
+    padding: 5px 10px; border-radius: 999px; border: 1px solid transparent;
+  }
+  .topbar a:hover { color: var(--ink); border-color: var(--border); }
+  .topbar .brand {
+    font-family: "Fraunces", serif; font-weight: 600; font-size: 15px;
+    color: var(--ink); margin-right: auto; white-space: nowrap;
+  }
+
+  header.hero { padding-block: 40px 28px; }
+  .eyebrow {
+    font-family: "JetBrains Mono", monospace; font-size: 12px;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); font-weight: 600;
+  }
+  h1 {
+    font-family: "Fraunces", serif; font-weight: 600;
+    font-size: clamp(28px, 6vw, 40px); line-height: 1.1; margin: 10px 0 12px; text-wrap: balance;
+  }
+  .hero p.lede { color: var(--ink-muted); font-size: 16px; max-width: 60ch; margin: 0; }
+
+  .progress-row {
+    margin-top: 22px; display: flex; align-items: center; gap: 12px;
+    font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--ink-muted);
+  }
+  .progress-track {
+    flex: 1; height: 6px; border-radius: 999px; background: var(--surface-2);
+    overflow: hidden; border: 1px solid var(--border);
+  }
+  .progress-fill { height: 100%; width: 0%; background: var(--accent); transition: width .25s ease; }
+
+  section.part { margin-top: 8px; padding-top: 28px; }
+  .part-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+  .part-tag {
+    font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 600;
+    letter-spacing: .06em; padding: 3px 9px; border-radius: 999px;
+  }
+  .tag-github { background: var(--github-soft); color: var(--github-accent); }
+  .tag-aws { background: var(--aws-soft); color: var(--aws-accent); }
+  .tag-local { background: var(--accent-soft); color: var(--accent); }
+
+  h2 { font-family: "Fraunces", serif; font-weight: 600; font-size: 26px; margin: 6px 0 4px; }
+  .part-sub { color: var(--ink-muted); font-size: 14.5px; margin: 0 0 22px; max-width: 60ch; }
+
+  .step {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px 18px 16px; margin-bottom: 14px;
+  }
+  .step-head { display: flex; align-items: flex-start; gap: 12px; }
+  .step-check {
+    appearance: none; -webkit-appearance: none; width: 22px; height: 22px; min-width: 22px;
+    border-radius: 7px; border: 1.5px solid var(--border); background: var(--surface-2);
+    cursor: pointer; margin-top: 2px; position: relative; transition: background .15s, border-color .15s;
+  }
+  .step-check:checked { background: var(--accent); border-color: var(--accent); }
+  .step-check:checked::after {
+    content: ""; position: absolute; left: 6px; top: 2px; width: 6px; height: 11px;
+    border: solid var(--accent-ink); border-width: 0 2px 2px 0; transform: rotate(40deg);
+  }
+  .step-title { font-weight: 600; font-size: 16px; margin: 0; }
+  .step.done .step-title { color: var(--ink-muted); text-decoration: line-through; text-decoration-color: var(--border); }
+  .step-num { font-family: "JetBrains Mono", monospace; color: var(--ink-muted); font-size: 13px; font-weight: 600; }
+  .step-body { margin-top: 10px; padding-left: 34px; }
+  .step-body p { margin: 0 0 10px; font-size: 14.5px; }
+  .step-body p:last-child { margin-bottom: 0; }
+
+  code.inline {
+    font-family: "JetBrains Mono", monospace; font-size: 0.9em;
+    background: var(--chip); padding: 0.1em 0.4em; border-radius: 5px;
+  }
+
+  .code-block { position: relative; background: var(--code-bg); border-radius: 10px; margin: 10px 0; overflow-x: auto; }
+  .code-block pre {
+    margin: 0; padding: 40px 16px 14px; font-family: "JetBrains Mono", monospace;
+    font-size: 13px; line-height: 1.6; color: var(--code-ink); white-space: pre;
+  }
+  .copy-btn {
+    position: absolute; top: 8px; right: 8px; font-family: "JetBrains Mono", monospace;
+    font-size: 11px; color: var(--code-ink); background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 4px 8px; cursor: pointer;
+  }
+  .copy-btn:hover { background: rgba(255,255,255,0.16); }
+  .copy-btn.copied { color: var(--code-accent); border-color: var(--code-accent); }
+
+  .callout { border-radius: 10px; padding: 12px 14px; font-size: 14px; margin: 10px 0; border: 1px solid transparent; }
+  .callout.warn { background: var(--warn-soft); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 35%, transparent); }
+  .callout.danger { background: var(--danger-soft); color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
+  .callout.ok { background: var(--accent-soft); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+  .callout b { font-weight: 700; }
+
+  table.sg { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 10px 0; }
+  table.sg th, table.sg td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); }
+  table.sg th {
+    font-family: "JetBrains Mono", monospace; font-size: 11px; text-transform: uppercase;
+    letter-spacing: .04em; color: var(--ink-muted); font-weight: 600;
+  }
+
+  .checklist { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 6px; }
+  .checklist li { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; }
+  .checklist li::before { content: "—"; color: var(--ink-muted); }
+
+  footer.done-footer {
+    margin: 40px 0 60px; padding-top: 20px; border-top: 1px solid var(--border);
+    color: var(--ink-muted); font-size: 13.5px;
+  }
+
+  @media (max-width: 480px) {
+    h1 { font-size: 26px; }
+    .step-body { padding-left: 0; margin-top: 12px; }
+  }
+</style>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <span class="brand">Manual de despliegue</span>
+    <a href="#github">① GitHub</a>
+    <a href="#local">② Local</a>
+    <a href="#aws">③ AWS EC2</a>
+    <a href="#cleanup">④ Limpieza</a>
+    <a href="#problemas">Problemas comunes</a>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="eyebrow">Lambda Web Framework · Application Server Lab</div>
+    <h1>De tu carpeta local a GitHub y a la instancia EC2</h1>
+    <p class="lede">Los comandos exactos para subir el proyecto, probarlo localmente y dejarlo corriendo en el puerto 8081 de tu instancia EC2 (la misma del laboratorio de networking, si sigue activa). Marca cada paso a medida que lo completas.</p>
+    <div class="progress-row">
+      <span id="progress-label">0 / <span id="progress-total">0</span> pasos</span>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+    </div>
+  </header>
+
+  <!-- ============ PART 1: GITHUB ============ -->
+  <section class="part" id="github">
+    <div class="part-head"><span class="part-tag tag-github">PARTE 1</span></div>
+    <h2>Subir el proyecto a GitHub</h2>
+    <p class="part-sub">Partiendo del <code class="inline">.zip</code> que ya tienes descargado, con las 5 commits completas (esqueleto → framework → app demo → tests → deploy y README).</p>
+
+    <div class="step" data-step>
+      <div class="step-head">
+        <input type="checkbox" class="step-check" aria-label="Completado">
+        <div><span class="step-num">PASO 1</span><p class="step-title">Descomprimir el proyecto</p></div>
+      </div>
+      <div class="step-body">
+        <p>Abre una terminal en la carpeta donde descargaste el archivo:</p>
+        <div class="code-block"><button class="copy-btn">Copiar</button><pre>unzip CoreDeploy-LabAREP.zip
+cd coredeploy</pre></div>
+        <p>Verifica que ves las 5 commits antes de continuar:</p>
+        <div class="code-block"><button class="copy-btn">Copiar</button><pre>git log --oneline</pre></div>
+      </div>
+    </div>
+
+    <div class="step" data-step>
+      <div class="step-head">
+        <input type="checkbox" class="step-check" aria-label="Completado">
+        <div><span class="step-num">PASO 2</span><p class="step-title">Renombrar la rama y conectar el repositorio remoto</p></div>
+      </div>
+      <div class="step-body">
+        <p>Tu repositorio en GitHub ya existe (<code class="inline">CoreDeploy-LabAREP</code>) y está vacío:</p>
+        <div class="code-block"><button class="copy-btn">Copiar</button><pre>git branch -M main
+git remote add origin https://github.com/LauraGutierrezr/CoreDeploy-LabAREP.git</pre></div>
+      </div>
+    </div>
+
+    <div class="step" data-step>
+      <div class="step-head">
+        <input type="checkbox" class="step-check" aria-label="Completado">
+        <div><span class="step-num">PASO 3</span><p class="step-title">Hacer push</p></div>
+      </div>
+      <div class="step-body">
+        <div class="code-block"><button class="copy-btn">Copiar</button><pre>git push -u origin main</pre></div>
+        <p>Git te va a pedir usuario y contraseña. Usa:</p>
+        <ul class="checklist">
+          <li><b>Usuario:</b> tu nombre de usuario de GitHub</li>
+          <li><b>Contraseña:</b> un personal access token (no tu contraseña normal — GitHub ya no la acepta por HTTPS)</li>
+        </ul>
+        <div class="callout warn"><b>Si no tienes un token a mano:</b> GitHub → Settings → Developer settings → Personal access tokens → Generate new token (classic), con permiso <code class="inline">repo</code>.</div>
+      </div>
+    </div>
+
+    <div class="step" data-step>
+      <div class="step-head">
+        <input type="checkbox" class="step-check" aria-label="Completado">
+        <div><span class="step-num">PASO 4</span><p class="step-title">Confirmar en GitHub</p></div>
+      </div>
+      <div class="step-body">
+        <p>Abre <code class="inline">https://github.com/LauraGutierrezr/CoreDeploy-LabAREP</code> y confirma:</p>
+        <ul class="checklist">
+          <li>Aparecen los archivos (<code class="inline">pom.xml</code>, <code class="inline">src/</code>, <code class="inline">README.md</code>, <code class="inline">deploy/</code>, <code class="inline">docs/</code>)</li>
+          <li>La pestaña "Commits" muestra las 5 commits, no una sola</li>
+          <li>El README se ve renderizado en la página principal, con el diagrama de arquitectura</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PART 2: LOCAL ============ -->
+  <section class="part" id="local">
+    <div class="part-head"><span class="part-tag tag-local">PARTE 2</span></div>
+    <h2>Compilar y probar en tu máquina</h2>
+    <p class="part-sub">Antes de tocar AWS, confirma que el jar se construye y los tests pasan en tu computador.</p>
+
+    <div class="step" data-step>
+      <div class="step-head">
+        <input type="checkbox" class="step-check" aria-label="Completado">
+        <div><span class="step-num">PASO 5</span><p class="step-title">Compilar y correr los tests</p></div>
+      </div>
+      <div class="step-body">
+        <div class="code-block"><button class="copy-btn">Copiar</button><pre>mvn clean package</pre></div>
+        <p>Debe terminar en <code class="inline">BUILD SUCCESS</code> con algo como <code class="inline">Tests run: 24, Failures: 0, Errors: 0</code>. Guarda esa salida — es evidencia para el README.</p>
+      </div>
+    </div>
+
+    <div class="step" data-step>
+      <div class="step-head">
+        <input type="checkbox" class="step-check" aria-label="Completado">
+        <div><span class="step-num">PASO 6</span><p class="step-title">Correrlo localmente</p></div>
+      </div>
+      <div class="step-body">
+        <div class="code-block"><button class="copy-btn">Copiar</button><pre>java -jar target/lambda-web-framework.jar</pre></div>
+        <p>En otra terminal:</p>
+        <div class="code-block"><button class="copy-btn">Copiar</button><pre>curl "http://localhost:8080/hello?name=Ana"
+curl "http://localhost:8080/pi"</pre></div>
+        <p>Y en el navegador: <code class="inline">http://localhost:8080/</code> — prueba el formulario de saludo y el botón de π.</p>
+        <p>Para detenerlo (modo desarrollo, no en producción): <code class="inline">curl http://localhost:8080/shutdown</code>, o simplemente <code class="inline">Ctrl+C</code> en la terminal donde corre.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PART 3: AWS ============ -->
+  <section class="part" id="aws">
+    <div class="part-head"><span class="part-tag tag-aws">PARTE 3</span></div>
+    <h2>Desplegar en EC2 (puerto 8081)</h2>
+    <p class="part-sub">Por defecto asumimos que reutilizas la <b>misma instancia EC2</b> del laboratorio de networking, en un puerto distinto (8081) para que ambos servidores puedan convivir. Si prefieres una instancia nueva, el paso 7 tiene la alternativa.</p>
+
+    <div class="callout warn"><b>Antes de empezar:</b> nunca subas tu <code class="inline">.pem</code> ni tus AWS access keys al repositorio — no los necesitas ahí para nada.</div>
+
+    <div class="step" data-step>
+      <div class="step-head">
+        <input type="checkbox" class="step-check" aria-label="Completado">
+        <div><span class="step-num">PASO 7</span><p class="step-title">Abrir el puerto 8081 en el security group</p></div>
+      </div>
+      <div class="step-body">
+        <p>En la consola de AWS → <b>EC2 → Security Groups</b> → selecciona el grupo de tu instancia → <b>Edit inbound rules → Add rule</b>:</p>
+        <table class="sg">
+          <thead><tr><th>Tipo</th><th>Puerto</th><th>Origen</th><th>Para qué</th></tr></thead>
+          <tbody>
+            <tr><td>Custom TCP</td><td>8081</td><td>0.0.0.0/0 (o el rango que indique tu instructor)</td><td>Acceder a esta aplicación</td></tr>
+          </tbody>
+        </table>
+        <p>Si vas a lanzar una <b>instancia nueva</b> en lugar de reutilizar la del lab de networking, repite también la regla de <code class="inline">SSH · 22 · My IP</code> y usa el puerto <code class="inline">8081</code> como puerto de la app desde el inicio.</p>
+        <div class="callout danger"><b>Ojo con las sesiones de AWS Academy:</b> si tu Learner Lab se reinició (End Lab / Start Lab), es posible que se haya creado un security group nuevo sin esta regla — verifícala cada vez que retomes el laboratorio, es la causa más común de "la página no carga" aunque el servicio esté <code class="inline">active (running)</code> por dentro.</div>
+      </div>
+    </div>
+
+    <div class="step" data-step>
+      <div class="step-head">
+        <input type="checkbox" class="step-check" aria-label="Completado">
+        <div><span class="step-num">PASO 8</span><p class="step-title">Conectarte a la instancia</p></div>
+      </div>
+      <div class="step-body">
+        <div class="code-block"><button class="copy-btn">Copiar</button><pre>chmod 400 ruta/a/tu-llave.pem
+ssh -i ruta/a/tu-llave.pem ec2-user@TU-IP-O-DNS-PUBLICA</pre></div>
+      </div>
+    </div>
+
+    <div class="step" data-step>
+      <div class="step-head">
+        <input type="checkbox" class="step-check" aria-label="Completado">
+        <div><span class="step-num">PASO 9</span><p class="step-title">Copiar el jar y el servicio desde tu máquina</p></div>
+      </div>
+      <div class="step-body">
+        <p>Desde la carpeta del proyecto en tu máquina (no dentro del SSH), con <code class="inline">target/lambda-web-framework.jar</code> ya construido:</p>
+        <div class="code-block"><button class="copy-btn">Copiar</button><pre>./deploy/deploy.sh TU-IP-O-DNS-PUBLICA ruta/a/tu-llave.pem ec2-user</pre></div>
+        <p>El script instala Java si hace falta, copia el jar, instala <code class="inline">lambda-web-framework.service</code> como servicio systemd en el puerto 8081 con <code class="inline">APP_ENV=production</code>, y lo arranca.</p>
+        <div class="callout warn"><b>Si el script no se puede ejecutar (macOS, "operation not permitted"):</b> suele ser el atributo de cuarentena del zip descargado. Prueba <code class="inline">xattr -dr com.apple.quarantine .</code> en la carpeta del proyecto. Si sigue sin funcionar, ejecuta a mano los comandos <code class="inline">scp</code>/<code class="inline">ssh</code> que están dentro de <code class="inline">deploy/deploy.sh</code> — son simples y no dependen del script.</div>
+      </div>
+    </div>
+
+    <div class="step" data-step>
+      <div class="step-head">
+        <input type="checkbox" class="step-check" aria-label="Completado">
+        <div><span class="step-num">PASO 10</span><p class="step-title">Verificar desde dentro de la instancia</p></div>
+      </div>
+      <div class="step-body">
+        <div class="code-block"><button class="copy-btn">Copiar</button><pre>curl http://127.0.0.1:8081/pi
+sudo systemctl status lambda-web-framework</pre></div>
+        <p>Debe responder <code class="inline">{"value": 3.141592653589793}</code> y mostrar <code class="inline">Active: active (running)</code>.</p>
+      </div>
+    </div>
+
+    <div class="step" data-step>
+      <div class="step-head">
+        <input type="checkbox" class="step-check" aria-label="Completado">
+        <div><span class="step-num">PASO 11</span><p class="step-title">Verificar desde fuera (navegador)</p></div>
+      </div>
+      <div class="step-body">
+        <p>Sal del SSH (o abre otra pestaña) y desde tu propia máquina:</p>
+        <div class="code-block"><button class="copy-btn">Copiar</button><pre>curl "http://TU-IP-PUBLICA:8081/hello?name=Ana"</pre></div>
+        <p>Luego abre <code class="inline">http://TU-IP-PUBLICA:8081/</code> en el navegador y prueba ambos botones. Si se queda cargando, el problema casi siempre es el security group del paso 7 — vuelve a revisarlo.</p>
+      </div>
+    </div>
+
+    <div class="step" data-step>
+      <div class="step-head">
+        <input type="checkbox" class="step-check" aria-label="Completado">
+        <div><span class="step-num">PASO 12</span><p class="step-title">Confirmar que /shutdown está desactivado</p></div>
+      </div>
+      <div class="step-body">
+        <div class="code-block"><button class="copy-btn">Copiar</button><pre>curl -i "http://TU-IP-PUBLICA:8081/shutdown"</pre></div>
+        <p>Debe responder <code class="inline">404 Not Found</code> — confirma que <code class="inline">APP_ENV=production</code> quedó bien configurado en el servicio.</p>
+      </div>
+    </div>
+
+    <div class="step" data-step>
+      <div class="step-head">
+        <input type="checkbox" class="step-check" aria-label="Completado">
+        <div><span class="step-num">PASO 13</span><p class="step-title">Confirmar que sobrevive al cierre de sesión</p></div>
+      </div>
+      <div class="step-body">
+        <p>Cierra tu sesión SSH por completo, espera medio minuto, y repite el <code class="inline">curl</code> del paso 11 — debe seguir respondiendo, porque systemd lo mantiene corriendo sin tu terminal abierta.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PART 4: CLEANUP ============ -->
+  <section class="part" id="cleanup">
+    <div class="part-head"><span class="part-tag tag-aws">PARTE 4</span></div>
+    <h2>Limpieza (obligatoria al terminar)</h2>
+    <p class="part-sub">Para no dejar cargos ni recursos abiertos en AWS Academy.</p>
+
+    <div class="step" data-step>
+      <div class="step-head">
+        <input type="checkbox" class="step-check" aria-label="Completado">
+        <div><span class="step-num">PASO 14</span><p class="step-title">Detener el servicio y liberar recursos</p></div>
+      </div>
+      <div class="step-body">
+        <div class="code-block"><button class="copy-btn">Copiar</button><pre>ssh -i ruta/a/tu-llave.pem ec2-user@TU-IP-O-DNS-PUBLICA sudo systemctl stop lambda-web-framework</pre></div>
+        <p>Luego, en la consola de AWS:</p>
+        <ul class="checklist">
+          <li>Si ya no necesitas la instancia para nada más: <b>EC2 → Instances → Terminate instance</b></li>
+          <li>Libera cualquier Elastic IP asociada (<b>EC2 → Elastic IPs → Release</b>)</li>
+          <li>Si la instancia se termina, revisa si el security group queda huérfano y elimínalo también</li>
+        </ul>
+        <div class="callout ok">Con esto quedan cubiertos los dos laboratorios sobre la misma instancia (si la reutilizaste) — no hace falta repetir la limpieza por separado.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ COMMON PROBLEMS ============ -->
+  <section class="part" id="problemas">
+    <div class="part-head"><span class="part-tag tag-local">REFERENCIA</span></div>
+    <h2>Problemas comunes</h2>
+    <div class="step">
+      <div class="step-body" style="padding-left:0">
+        <p><b>La página pública no carga pero <code class="inline">curl</code> local sí funciona:</b> falta la regla del security group para el puerto 8081 (paso 7) — es, por lejos, la causa más frecuente.</p>
+        <p><b>«Permissions 0400 for key.pem are too open»:</b> ejecuta <code class="inline">chmod 400 tu-llave.pem</code>.</p>
+        <p><b>El servicio no arranca tras <code class="inline">systemctl enable --now</code>:</b> revisa <code class="inline">journalctl -u lambda-web-framework -n 50</code> y <code class="inline">/var/log/lambda-web-framework/server.log</code>.</p>
+        <p><b><code class="inline">/shutdown</code> responde 200 en vez de 404 en producción:</b> el servicio no tiene <code class="inline">APP_ENV=production</code> — revisa <code class="inline">deploy/lambda-web-framework.service</code> en la instancia y reinicia con <code class="inline">sudo systemctl restart lambda-web-framework</code>.</p>
+        <p><b>Git pide credenciales y las rechaza:</b> confirma que estás usando el token (no tu contraseña de GitHub) como password, y que el token no haya expirado.</p>
+        <p><b>EC2 Instance Connect dice "failed to connect":</b> usa SSH por terminal con el <code class="inline">.pem</code> en su lugar — Instance Connect no siempre funciona si el security group restringe SSH a "My IP".</p>
+      </div>
+    </div>
+
+    <footer class="done-footer">
+      Referencia completa de diseño y decisiones en <code class="inline">README.md</code> del repositorio. Esta guía cubre solo la mecánica de subida y despliegue — súbela una vez y no hace falta volver a leerla, salvo que reinicies el proceso.
+    </footer>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('.step-check'));
+  var total = boxes.length;
+  document.getElementById('progress-total').textContent = total;
+
+  var STORAGE_KEY = 'coredeploy-guide-progress';
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) { return {}; }
+  }
+  function saveState(state) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  function updateProgress() {
+    var done = boxes.filter(function (b) { return b.checked; }).length;
+    document.getElementById('progress-label').firstChild.textContent = done + ' / ';
+    document.getElementById('progress-fill').style.width = (total ? (done / total * 100) : 0) + '%';
+  }
+
+  var state = loadState();
+  boxes.forEach(function (box, i) {
+    var key = 'step-' + i;
+    if (state[key]) {
+      box.checked = true;
+      box.closest('.step').classList.add('done');
+    }
+    box.addEventListener('change', function () {
+      box.closest('.step').classList.toggle('done', box.checked);
+      state[key] = box.checked;
+      saveState(state);
+      updateProgress();
+    });
+  });
+  updateProgress();
+
+  document.querySelectorAll('.copy-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var pre = btn.parentElement.querySelector('pre');
+      var text = pre.innerText;
+      function flash() {
+        var original = btn.textContent;
+        btn.textContent = 'Copiado';
+        btn.classList.add('copied');
+        setTimeout(function () {
+          btn.textContent = original;
+          btn.classList.remove('copied');
+        }, 1500);
+      }
+      try {
+        navigator.clipboard.writeText(text).then(flash, function () {
+          btn.textContent = 'Selecciona y copia';
+        });
+      } catch (e) {
+        btn.textContent = 'Selecciona y copia';
+      }
+    });
+  });
+})();
+</script>
