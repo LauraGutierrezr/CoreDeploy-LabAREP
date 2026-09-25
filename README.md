@@ -71,8 +71,6 @@ close early" shortcut exists at all (`/shutdown`, wired up only when
 
 ## Architecture
 
-![Architecture diagram](docs/architecture.svg)
-
 ```
 Browser  --HTTP-->  EC2 security group  -->  HttpServer (sequential accept loop)
                                                    |
@@ -303,6 +301,7 @@ If you would rather deploy by hand instead of running the script, see
 `deploy/deploy.sh` — it is a short, readable sequence of `scp`/`ssh`
 commands with no hidden steps.
 
+
 ### Example URLs (replace `<instance-ip>` with the real public IP/DNS)
 
 | Resource | URL |
@@ -316,26 +315,40 @@ commands with no hidden steps.
 
 ## Evidence
 
+<img width="1011" height="297" alt="Captura de pantallaa la(s) 6 37 10 p m" src="https://github.com/user-attachments/assets/548ef27c-6fea-4d1b-87ab-1cd39ac75c25" />
+
+
+<img width="717" height="267" alt="Captura de pantallaa(s) 6 36 44 p m" src="https://github.com/user-attachments/assets/948d5f48-59f6-43c3-9a83-83f506f43d8d" />
+
+<img width="1264" height="859" alt="Captura de pantall la(s) 6 38 14 p m" src="https://github.com/user-attachments/assets/32160142-937c-4657-bb24-ee690ac72f5d" />
+
+<img width="677" height="330" alt="Captura de pantalla(s) 6 38 48 p m" src="https://github.com/user-attachments/assets/f59b4d4f-f2cf-4f76-838e-06b408ebc713" />
 
 
 **Local**
-
-- [ ] `mvn clean package` succeeding, with the test summary (`Tests run: N, Failures: 0, Errors: 0`).
-- [ ] `curl http://localhost:8080/hello?name=...` and `/pi` responses, run locally.
-- [ ] `curl http://localhost:8080/does-not-exist` returning `404`.
-- [ ] Browser screenshot of the demo page working locally.
-- [ ] `curl http://localhost:8080/shutdown` (with `APP_ENV` unset/`development`) returning its confirmation message, and the server process exiting right after — evidence that `/shutdown` works in development.
+`mvn clean package` succeeding, with the test summary (`Tests run: N, Failures: 0, Errors: 0`).
+`curl http://localhost:8080/hello?name=...` and `/pi` responses, run locally.
+`curl http://localhost:8080/does-not-exist` returning `404`.
+`curl http://localhost:8080/shutdown` (with `APP_ENV` unset/`development`) returning its confirmation message, and the server process exiting right after — evidence that `/shutdown` works in development.
 
 **Cloud (AWS EC2)**
 
-- [ ] Security group inbound rule for port `8081`.
-- [ ] `systemctl status lambda-web-framework` on the instance showing `active (running)`.
-- [ ] Browser screenshot of the demo page working against the public EC2 IP.
-- [ ] `curl` output for both REST endpoints against the public IP (`/hello?name=...` and `/pi`).
-- [ ] Browser or `curl` evidence of the static image loading (`/images/logo.png`).
-- [ ] `curl http://<instance-ip>:8081/does-not-exist` returning `404`.
-- [ ] `curl -i http://<instance-ip>:8081/shutdown` returning `404` — evidence it is **not** available in production.
-- [ ] Evidence of the configured environment variables **without exposing secrets** — e.g. `sudo systemctl show lambda-web-framework -p Environment` on the instance, or a screenshot of the `Environment=` lines in `deploy/lambda-web-framework.service` (there is nothing secret in `PORT`/`APP_ENV`/`GREETING_PREFIX`, so this is safe to show as-is).
+- Security group inbound rule for port `8081`.
+- `systemctl status lambda-web-framework` on the instance showing `active (running)`.
+-  Browser screenshot of the demo page working against the public EC2 IP.
+-  `curl` output for both REST endpoints against the public IP (`/hello?name=...` and `/pi`).
+-  Browser or `curl` evidence of the static image loading (`/images/logo.png`).
+-  `curl http://<instance-ip>:8081/does-not-exist` returning `404`.
+-  `curl -i http://<instance-ip>:8081/shutdown` returning `404` — evidence it is **not** available in production.
+-  Evidence of the configured environment variables **without exposing secrets** — e.g. `sudo systemctl show lambda-web-framework -p Environment` on the instance, or a screenshot of the `Environment=` lines in `deploy/lambda-web-framework.service` (there is nothing secret in `PORT`/`APP_ENV`/`GREETING_PREFIX`, so this is safe to show as-is).
+
+<img width="715" height="772" alt="image" src="https://github.com/user-attachments/assets/5e50ce87-63e2-43f0-80ec-3000d9ad2350" />
+
+<img width="704" height="56" alt="image" src="https://github.com/user-attachments/assets/6abb694f-d3bd-4bc2-9123-a1869d4a189a" />
+
+
+<img width="622" height="93" alt="image" src="https://github.com/user-attachments/assets/b14e0e60-b08e-4623-a8a6-7a80a65ea198" />
+
 
 ## Maintainability
 
@@ -350,15 +363,6 @@ between classpath and filesystem mode. Those can all change — add
 wildcard routes, switch to NIO, add a cache — without touching
 `Application.java` or breaking any other app built on the same framework.
 
-Configuration living in environment variables rather than constants means
-the identical jar is what runs in development and in production; the only
-difference between them is `APP_ENV=production` at deploy time, which is
-also what removes the operational `/shutdown` backdoor before the app is
-reachable from the public internet. Tests exercise the framework only
-through its public surface (`get`/`start`/`stop`, real HTTP requests over
-real sockets), so the test suite itself acts as a second, executable
-description of the contract the framework promises to any application
-built on top of it.
 
 ## Cleanup
 
